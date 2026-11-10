@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Splitter | 2分割 & 4分割</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- pdf-lib (安定版 1.17.1) -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="12" y1="3" x2="12" y2="21"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                </svg>
+                <h1>PDF Splitter</h1>
+            </div>
+            <p class="subtitle">1枚のPDFを美しく「4分割」または「2分割」に切り分けます</p>
+        </header>
+
+        <main>
+            <!-- ドロップゾーン -->
+            <div id="drop-zone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <div class="icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                    </div>
+                    <h2>PDFをドラッグ＆ドロップ</h2>
+                    <p>またはクリックしてファイルを選択</p>
+                    <input type="file" id="file-input" accept="application/pdf" hidden>
+                </div>
+            </div>
+
+            <!-- ステータスパネル (ファイル選択後) -->
+            <div id="status-panel" class="status-panel hidden">
+                <div class="file-info">
+                    <div class="file-details">
+                        <svg class="file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span id="file-name" class="file-name">filename.pdf</span>
+                    </div>
+                    <button id="cancel-btn" class="cancel-btn" title="キャンセル">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 分割モード選択エリア -->
+                <div class="split-options-section">
+                    <div class="section-title">分割パターンを選択</div>
+                    <div class="split-options-grid">
+                        <!-- 4分割 (2x2) -->
+                        <label class="split-option-card active" data-mode="4grid">
+                            <input type="radio" name="split-mode" value="4grid" checked>
+                            <div class="split-preview-icon preview-4"></div>
+                            <span class="option-name">4分割</span>
+                            <span class="option-desc">2×2 グリッド</span>
+                        </label>
+
+                        <!-- 2分割 (左右) -->
+                        <label class="split-option-card" data-mode="2vertical">
+                            <input type="radio" name="split-mode" value="2vertical">
+                            <div class="split-preview-icon preview-2v"></div>
+                            <span class="option-name">2分割 (左右)</span>
+                            <span class="option-desc">中央で縦割り</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 処理中プログレスバー -->
+                <div class="progress-container hidden" id="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p id="progress-text" class="progress-text">処理中...</p>
+                </div>
+
+                <!-- 実行ボタン -->
+                <button id="process-btn" class="primary-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span id="process-btn-text">4分割を実行する</span>
+                </button>
+                
+                <!-- ダウンロード完了エリア -->
+                <div id="download-actions" class="download-actions hidden">
+                    <p class="success-msg">✅ 分割が完了しました！</p>
+                    <button id="download-btn" class="primary-btn download-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        分割済みPDFを保存
+                    </button>
+                    
+                    <div class="secondary-actions">
+                        <button id="re-split-btn" class="secondary-btn" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="1 4 1 10 7 10"></polyline>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                            </svg>
+                            別のパターンで分割
+                        </button>
+                        <button id="new-file-btn" class="secondary-btn" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <line x1="12" y1="11" x2="12" y2="17"></line>
+                                <line x1="9" y1="14" x2="15" y2="14"></line>
+                            </svg>
+                            別のPDFを選択
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>すべての処理はブラウザ内で完結します（サーバーへファイルは送信されません）</p>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
